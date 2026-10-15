@@ -1,139 +1,586 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CivicPass - Passwordless Authentication</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CivicPass | Next-Gen Passwordless Authentication</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- SimpleWebAuthn browser client bundle -->
+  <!-- SimpleWebAuthn Browser Library -->
   <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
+  <!-- QR Code Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
 
-  <div class="max-w-md w-full bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-700">
-    <div class="text-center mb-8">
-      <div class="inline-flex p-2 px-3 rounded-full bg-indigo-500/10 text-indigo-400 mb-3 font-mono text-xs font-semibold">
-        FIDO2 / WebAuthn Powered
+  <!-- Top Navigation Header -->
+  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur px-6 py-4 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center font-bold text-lg shadow-lg shadow-indigo-500/20">
+          CP
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-lg tracking-tight">CivicPass</h1>
+            <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">FIDO2 / WebAuthn</span>
+          </div>
+          <p class="text-xs text-slate-400">Phishing-Resistant & Inclusive Authentication</p>
+        </div>
       </div>
-      <h1 class="text-2xl font-bold tracking-tight">CivicPass Login</h1>
-      <p class="text-slate-400 text-sm mt-1">Phishing-Resistant Identity System</p>
+
+      <!-- Tab Navigation Buttons -->
+      <nav class="flex flex-wrap gap-1 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60 text-xs font-medium">
+        <button onclick="switchTab('auth')" id="tab-btn-auth" class="tab-btn px-3 py-1.5 rounded-lg bg-indigo-600 text-white">Auth / Passkeys</button>
+        <button onclick="switchTab('phishing')" id="tab-btn-phishing" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">Phishing Demo</button>
+        <button onclick="switchTab('inclusivity')" id="tab-btn-inclusivity" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">Kiosk & Voice</button>
+        <button onclick="switchTab('recovery')" id="tab-btn-recovery" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">Guardian Recovery</button>
+        <button onclick="switchTab('admin')" id="tab-btn-admin" class="tab-btn px-3 py-1.5 rounded-lg text-slate-400 hover:text-white">Admin Logs</button>
+      </nav>
     </div>
+  </header>
 
-    <div class="space-y-4">
-      <div>
-        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Username / Identifier</label>
-        <input 
-          id="username" 
-          type="text" 
-          placeholder="e.g. rahul@gov.in"
-          class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-white text-sm"
-        />
-      </div>
-
-      <div class="flex gap-3 pt-2">
-        <button 
-          id="btn-register"
-          class="flex-1 py-3 px-4 bg-slate-700 hover:bg-slate-600 rounded-xl font-medium text-sm transition border border-slate-600"
-        >
-          Enroll Passkey
-        </button>
-        <button 
-          id="btn-login"
-          class="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-medium text-sm transition shadow-lg shadow-indigo-600/30"
-        >
-          Sign In
-        </button>
-      </div>
-
-      <div id="status-card" class="hidden mt-6 p-4 rounded-xl border text-sm transition-all"></div>
-    </div>
+  <!-- Global Notification Banner -->
+  <div class="max-w-3xl w-full mx-auto px-4 mt-6">
+    <div id="status-card" class="hidden p-4 rounded-xl border text-sm transition-all shadow-md"></div>
   </div>
 
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6">
+
+    <!-- ======================================================== -->
+    <!-- TAB 1: PASSKEY AUTHENTICATION (ENROLL & LOGIN) -->
+    <!-- ======================================================== -->
+    <section id="tab-auth" class="tab-content space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl">
+        <div class="mb-6">
+          <h2 class="text-xl font-bold">Biometric Passkey Access</h2>
+          <p class="text-slate-400 text-sm mt-1">Authenticate cryptographically using Touch ID, Face ID, Windows Hello, or hardware security keys without shared passwords.</p>
+        </div>
+
+        <div class="space-y-4 max-w-md">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Username / Aadhaar Alias</label>
+            <input id="auth-username" type="text" placeholder="e.g. rahul@civic.in" class="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-white text-sm" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Device Friendly Name (for Enrollment)</label>
+            <input id="auth-device-name" type="text" placeholder="e.g. Rahul's MacBook Pro" class="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-white text-sm" />
+          </div>
+
+          <div class="flex gap-3 pt-2">
+            <button onclick="handleEnrollPasskey()" class="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl font-medium text-sm transition">
+              Enroll Passkey
+            </button>
+            <button onclick="handleSignInPasskey()" class="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-medium text-sm transition shadow-lg shadow-indigo-600/30">
+              Sign In
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- TAB 2: PHISHING RESISTANCE LIVE TEST -->
+    <!-- ======================================================== -->
+    <section id="tab-phishing" class="tab-content hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="p-2 rounded-lg bg-amber-500/10 text-amber-400 font-mono text-xs">Origin Binding Protection</div>
+          <h2 class="text-xl font-bold">Phishing Resistance Inspector</h2>
+        </div>
+        <p class="text-slate-400 text-sm mb-6">
+          WebAuthn credentials can never be replayed by a malicious reverse-proxy or look-alike site because the hardware authenticator signs the exact browser origin.
+        </p>
+
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div class="bg-slate-950 p-5 rounded-xl border border-emerald-500/30">
+            <div class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Legitimate Domain</div>
+            <div class="mt-2 text-base font-mono text-slate-200">http://portal.local:3000</div>
+            <p class="text-xs text-slate-400 mt-2">Origin matches registered Relying Party (RP ID). Biometric challenge signs successfully.</p>
+          </div>
+
+          <div class="bg-slate-950 p-5 rounded-xl border border-rose-500/30">
+            <div class="text-xs font-bold text-rose-400 uppercase tracking-wider">Simulated Phishing Domain</div>
+            <div class="mt-2 text-base font-mono text-slate-200">http://evil-portal.local:3000</div>
+            <p class="text-xs text-slate-400 mt-2">Any attempt to forward credentials fails backend origin verification instantly.</p>
+          </div>
+        </div>
+
+        <div class="mt-6 p-4 rounded-xl bg-slate-950 border border-slate-800">
+          <h3 class="text-sm font-semibold text-slate-200 mb-2">How to trigger this for judges:</h3>
+          <ol class="list-decimal list-inside text-xs text-slate-400 space-y-1">
+            <li>Ensure you added <code class="text-indigo-400">127.0.0.1 portal.local evil-portal.local</code> to <code class="text-indigo-400">/etc/hosts</code>.</li>
+            <li>Register on <a href="http://portal.local:3000" class="text-indigo-400 underline" target="_blank">http://portal.local:3000</a>.</li>
+            <li>Try logging into <a href="http://evil-portal.local:3000" class="text-rose-400 underline" target="_blank">http://evil-portal.local:3000</a> with the same user. The server triggers a red <b>PHISHING DETECTED</b> origin alert.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- TAB 3: INCLUSIVITY (KIOSK QR & VOICE PROMPT IVR) -->
+    <!-- ======================================================== -->
+    <section id="tab-inclusivity" class="tab-content hidden space-y-6">
+      <div class="grid md:grid-cols-2 gap-6">
+        
+        <!-- Cross-Device Kiosk QR Flow -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+          <div>
+            <div class="inline-flex px-2 py-1 rounded bg-indigo-500/10 text-indigo-400 font-mono text-[10px] mb-3">Public Terminal / Kiosk Mode</div>
+            <h2 class="text-lg font-bold">Assisted QR Login</h2>
+            <p class="text-slate-400 text-xs mt-1 mb-4">For citizens using a shared library/CSC computer without hardware passkeys.</p>
+            
+            <div class="flex flex-col items-center justify-center p-4 bg-slate-950 rounded-xl border border-slate-800 min-h-[220px]">
+              <div id="kiosk-qrcode" class="p-2 bg-white rounded-lg"></div>
+              <p id="kiosk-session-id" class="text-xs font-mono text-slate-400 mt-3">Click generate to start session</p>
+            </div>
+          </div>
+
+          <div class="mt-4 space-y-2">
+            <button onclick="initiateKioskSession()" class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-medium transition">
+              Generate Kiosk Session QR
+            </button>
+            <button onclick="simulateSmartphoneScan()" id="btn-simulate-scan" class="hidden w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-medium transition text-emerald-400">
+              Simulate Scanning & Approving on Smartphone
+            </button>
+          </div>
+        </div>
+
+        <!-- Voice Prompt / Basic Phone IVR -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+          <div>
+            <div class="inline-flex px-2 py-1 rounded bg-amber-500/10 text-amber-400 font-mono text-[10px] mb-3">Feature Phone / Low-Literacy</div>
+            <h2 class="text-lg font-bold">Voice Prompt Simulator</h2>
+            <p class="text-slate-400 text-xs mt-1 mb-4">Simulates an automated phone call prompt requiring out-of-band keypad confirmation.</p>
+
+            <div class="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
+              <input id="ivr-username" type="text" placeholder="Citizen Identifier" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-xs" />
+              <button onclick="playVoicePrompt()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs flex items-center justify-center gap-2 border border-slate-700">
+                <span>🔊</span> Play Audio Verification Prompt
+              </button>
+              
+              <div class="pt-2 text-center">
+                <span class="text-[11px] text-slate-400">Press '1' on the dialpad to approve:</span>
+                <div class="grid grid-cols-3 gap-2 mt-2 max-w-[180px] mx-auto">
+                  <button onclick="pressIvrKey('1')" class="py-2 bg-slate-900 hover:bg-indigo-600 border border-slate-800 rounded font-mono text-sm font-bold">1</button>
+                  <button onclick="pressIvrKey('2')" class="py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded font-mono text-sm">2</button>
+                  <button onclick="pressIvrKey('3')" class="py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded font-mono text-sm">3</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="ivr-result" class="text-xs text-center text-slate-400 mt-4 min-h-[20px]"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- TAB 4: GUARDIAN SOCIAL RECOVERY (NO SMS/PASSWORDS) -->
+    <!-- ======================================================== -->
+    <section id="tab-recovery" class="tab-content hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl">
+        <div class="mb-6">
+          <div class="inline-flex px-2 py-1 rounded bg-violet-500/10 text-violet-400 font-mono text-[10px] mb-2">Shamir 2-of-3 Threshold</div>
+          <h2 class="text-xl font-bold">Guardian Account Recovery</h2>
+          <p class="text-slate-400 text-sm mt-1">Recover account access if all physical hardware passkeys are lost, without falling back to weak passwords or interceptable SMS OTPs.</p>
+        </div>
+
+        <div class="space-y-4 max-w-md">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Target Account Username</label>
+            <input id="rec-username" type="text" placeholder="e.g. rahul@civic.in" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white text-sm" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Guardian Key 1 (e.g. Family Member Key)</label>
+            <input id="rec-share1" type="text" placeholder="GUARDIAN-KEY-ALPHA-7721" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white text-sm font-mono" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Guardian Key 2 (e.g. Branch Officer Key)</label>
+            <input id="rec-share2" type="text" placeholder="GUARDIAN-KEY-BETA-9943" class="w-full px-4 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white text-sm font-mono" />
+          </div>
+
+          <button onclick="handleGuardianRecovery()" class="w-full mt-2 py-3 bg-violet-600 hover:bg-violet-500 rounded-xl font-medium text-sm transition shadow-lg shadow-violet-600/30">
+            Verify Threshold & Unlock Account
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================== -->
+    <!-- TAB 5: ADMIN DASHBOARD & SECURITY AUDIT FEED -->
+    <!-- ======================================================== -->
+    <section id="tab-admin" class="tab-content hidden space-y-6">
+      
+      <!-- Device Management Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-lg font-bold">Registered Hardware Devices</h2>
+            <p class="text-xs text-slate-400">View and revoke cryptographic device tokens</p>
+          </div>
+          <div class="flex gap-2">
+            <input id="admin-user-filter" type="text" placeholder="Lookup username..." class="px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs" />
+            <button onclick="loadUserDevices()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs">Search</button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400">
+                <th class="py-2.5 px-3">Device Name</th>
+                <th class="py-2.5 px-3">Credential ID</th>
+                <th class="py-2.5 px-3">Enrolled Date</th>
+                <th class="py-2.5 px-3">Status</th>
+                <th class="py-2.5 px-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="device-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+              <tr>
+                <td colspan="5" class="py-4 text-center text-slate-500">Search for a username above to inspect active devices.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Real-Time Audit Log Feed -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-lg font-bold">Security Audit Feed</h2>
+            <p class="text-xs text-slate-400">Real-time cryptographic verification log & threat detection</p>
+          </div>
+          <button onclick="fetchAuditLogs()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs">
+            Refresh Logs
+          </button>
+        </div>
+
+        <div id="audit-log-container" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+          <!-- Audit items injected dynamically -->
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Frontend Logic -->
   <script>
     const { startRegistration, startAuthentication } = SimpleWebAuthnBrowser;
 
-    const usernameInput = document.getElementById('username');
-    const btnRegister = document.getElementById('btn-register');
-    const btnLogin = document.getElementById('btn-login');
     const statusCard = document.getElementById('status-card');
+    let activeKioskId = null;
+    let kioskPollInterval = null;
 
-    function showStatus(message, isError = false) {
-      statusCard.className = `mt-6 p-4 rounded-xl border text-sm transition-all ${
-        isError ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-      }`;
-      statusCard.innerHTML = message;
-      statusCard.classList.remove('hidden');
+    // --- Tab Switching Logic ---
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white');
+        btn.classList.add('text-slate-400');
+      });
+
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+      activeBtn.classList.add('bg-indigo-600', 'text-white');
+      activeBtn.classList.remove('text-slate-400');
+
+      if (tabId === 'admin') {
+        fetchAuditLogs();
+      }
     }
 
-    // --- 1. Enroll Passkey ---
-    btnRegister.addEventListener('click', async () => {
-      const username = usernameInput.value.trim();
-      if (!username) return showStatus('Please enter a username first', true);
+    function showStatus(message, type = 'info') {
+      statusCard.classList.remove('hidden', 'bg-red-500/10', 'border-red-500/30', 'text-red-400', 'bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-400', 'bg-indigo-500/10', 'border-indigo-500/30', 'text-indigo-400');
+      
+      if (type === 'error') {
+        statusCard.classList.add('bg-red-500/10', 'border-red-500/30', 'text-red-400');
+      } else if (type === 'success') {
+        statusCard.classList.add('bg-emerald-500/10', 'border-emerald-500/30', 'text-emerald-400');
+      } else {
+        statusCard.classList.add('bg-indigo-500/10', 'border-indigo-500/30', 'text-indigo-400');
+      }
+      statusCard.innerHTML = message;
+    }
+
+    // ==========================================
+    // 1. PASSKEY ENROLLMENT & SIGN IN
+    // ==========================================
+    async function handleEnrollPasskey() {
+      const username = document.getElementById('auth-username').value.trim();
+      const deviceName = document.getElementById('auth-device-name').value.trim() || 'My Passkey Device';
+      if (!username) return showStatus('Please enter a username or alias first.', 'error');
 
       try {
-        showStatus('Requesting enrollment options...');
-        const resp = await fetch('/api/auth/register-challenge', {
+        showStatus('Requesting enrollment options from server...');
+        const res = await fetch('/api/auth/register-challenge', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username }),
+          body: JSON.stringify({ username, deviceName })
         });
-        const options = await resp.json();
+        const options = await res.json();
         if (options.error) throw new Error(options.error);
 
-        showStatus('Scan fingerprint / PIN on your device...');
+        showStatus('Touch sensor / PIN prompt opened on your device...');
         const attestation = await startRegistration({ optionsJSON: options });
 
-        const verifyResp = await fetch('/api/auth/register-verify', {
+        const verifyRes = await fetch('/api/auth/register-verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(attestation),
+          body: JSON.stringify(attestation)
         });
-        const verificationResult = await verifyResp.json();
+        const verifyData = await verifyRes.json();
 
-        if (verificationResult.verified) {
-          showStatus('✅ Passkey created & bound to your hardware successfully!');
+        if (verifyData.verified) {
+          showStatus(`✅ Device <b>${deviceName}</b> bound to <b>${username}</b>!`, 'success');
         } else {
-          showStatus('❌ Registration failed: ' + verificationResult.error, true);
+          showStatus(`❌ Registration rejected: ${verifyData.error}`, 'error');
         }
       } catch (err) {
-        showStatus('❌ ' + err.message, true);
+        showStatus(`❌ ${err.message}`, 'error');
       }
-    });
+    }
 
-    // --- 2. Sign In with Passkey ---
-    btnLogin.addEventListener('click', async () => {
-      const username = usernameInput.value.trim();
-      if (!username) return showStatus('Please enter your username', true);
+    async function handleSignInPasskey() {
+      const username = document.getElementById('auth-username').value.trim();
+      if (!username) return showStatus('Please enter your username to sign in.', 'error');
 
       try {
-        showStatus('Requesting challenge...');
-        const resp = await fetch('/api/auth/login-challenge', {
+        showStatus('Requesting challenge for genuine RP...');
+        const res = await fetch('/api/auth/login-challenge', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username }),
+          body: JSON.stringify({ username })
         });
-        const options = await resp.json();
+        const options = await res.json();
         if (options.error) throw new Error(options.error);
 
-        showStatus('Scan biometrics to verify...');
+        showStatus('Scan biometrics to confirm presence...');
         const assertion = await startAuthentication({ optionsJSON: options });
 
-        const verifyResp = await fetch('/api/auth/login-verify', {
+        const verifyRes = await fetch('/api/auth/login-verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(assertion),
+          body: JSON.stringify(assertion)
         });
-        const verificationResult = await verifyResp.json();
+        const verifyData = await verifyRes.json();
 
-        if (verificationResult.verified) {
-          showStatus(`🎉 Welcome back, <b>${verificationResult.username}</b>! Authenticated securely without passwords.`);
+        if (verifyData.verified) {
+          showStatus(`🎉 Welcome back, <b>${verifyData.username}</b>! Authenticated securely without passwords.`, 'success');
         } else {
-          showStatus('❌ Login failed: ' + verificationResult.error, true);
+          showStatus(`❌ Login failed: ${verifyData.error}`, 'error');
         }
       } catch (err) {
-        showStatus('❌ ' + err.message, true);
+        showStatus(`❌ ${err.message}`, 'error');
       }
-    });
+    }
+
+    // ==========================================
+    // 2. KIOSK & VOICE INCLUSIVITY
+    // ==========================================
+    async function initiateKioskSession() {
+      try {
+        const res = await fetch('/api/kiosk/create-session', { method: 'POST' });
+        const data = await res.json();
+
+        activeKioskId = data.sessionId;
+        document.getElementById('kiosk-session-id').innerText = `Session Token: ${activeKioskId}`;
+        
+        // Render QR
+        const qrContainer = document.getElementById('kiosk-qrcode');
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, {
+          text: data.qrPayload,
+          width: 140,
+          height: 140,
+        });
+
+        document.getElementById('btn-simulate-scan').classList.remove('hidden');
+
+        // Start polling for scan confirmation
+        if (kioskPollInterval) clearInterval(kioskPollInterval);
+        kioskPollInterval = setInterval(pollKioskStatus, 2000);
+      } catch (err) {
+        showStatus(err.message, 'error');
+      }
+    }
+
+    async function pollKioskStatus() {
+      if (!activeKioskId) return;
+      try {
+        const res = await fetch(`/api/kiosk/status/${activeKioskId}`);
+        const data = await res.json();
+        if (data.status === 'AUTHORIZED') {
+          clearInterval(kioskPollInterval);
+          showStatus(`✅ Kiosk Authorized by remote smartphone for citizen: <b>${data.username}</b>!`, 'success');
+          document.getElementById('kiosk-session-id').innerText = 'Session Authorized Successfully';
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function simulateSmartphoneScan() {
+      if (!activeKioskId) return;
+      const username = prompt('Enter citizen username approving on their phone:', 'rahul@civic.in');
+      if (!username) return;
+
+      const res = await fetch('/api/kiosk/authorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: activeKioskId, username })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showStatus('Smartphone scanned & validated passkey remotely!', 'success');
+      }
+    }
+
+    function playVoicePrompt() {
+      const text = "Namaste. Press 1 on your phone dialpad to confirm your login to Civic Pass.";
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.95;
+        window.speechSynthesis.speak(utterance);
+      } else {
+        alert(text);
+      }
+    }
+
+    async function pressIvrKey(key) {
+      const username = document.getElementById('ivr-username').value.trim() || 'Citizen';
+      const res = await fetch('/api/inclusivity/voice-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, pressedKey: key })
+      });
+      const data = await res.json();
+      const resultEl = document.getElementById('ivr-result');
+      if (data.verified) {
+        resultEl.className = 'text-xs text-center text-emerald-400 mt-4';
+        resultEl.innerText = `Key ${key} Confirmed: Voice IVR session authenticated.`;
+      } else {
+        resultEl.className = 'text-xs text-center text-rose-400 mt-4';
+        resultEl.innerText = `Key ${key} Rejected: Invalid confirmation option.`;
+      }
+    }
+
+    // ==========================================
+    // 3. GUARDIAN SOCIAL RECOVERY
+    // ==========================================
+    async function handleGuardianRecovery() {
+      const username = document.getElementById('rec-username').value.trim();
+      const share1 = document.getElementById('rec-share1').value.trim();
+      const share2 = document.getElementById('rec-share2').value.trim();
+
+      if (!username || !share1 || !share2) {
+        return showStatus('Please enter the target username and 2 distinct guardian keys.', 'error');
+      }
+
+      try {
+        const res = await fetch('/api/recovery/guardian-verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, share1, share2 })
+        });
+        const data = await res.json();
+
+        if (data.verified) {
+          showStatus(`🛡️ <b>${data.message}</b> You can now register a fresh passkey on Tab 1.`, 'success');
+        } else {
+          showStatus(`❌ Recovery failed: ${data.error}`, 'error');
+        }
+      } catch (err) {
+        showStatus(err.message, 'error');
+      }
+    }
+
+    // ==========================================
+    // 4. ADMIN CONSOLE & AUDIT LOGS
+    // ==========================================
+    async function loadUserDevices() {
+      const username = document.getElementById('admin-user-filter').value.trim();
+      if (!username) return alert('Enter a username to search devices.');
+
+      const res = await fetch(`/api/admin/devices/${username}`);
+      const data = await res.json();
+      const tbody = document.getElementById('device-table-body');
+      tbody.innerHTML = '';
+
+      if (data.devices.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-500">No passkeys found for ${username}.</td></tr>`;
+        return;
+      }
+
+      data.devices.forEach(device => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-slate-800/40';
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 font-medium text-white">${device.deviceName}</td>
+          <td class="py-2.5 px-3 font-mono text-[10px] text-slate-400">${device.id.substring(0, 16)}...</td>
+          <td class="py-2.5 px-3 text-slate-400">${device.createdAt}</td>
+          <td class="py-2.5 px-3">
+            <span class="px-2 py-0.5 rounded text-[10px] ${device.isRevoked ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}">
+              ${device.isRevoked ? 'REVOKED' : 'ACTIVE'}
+            </span>
+          </td>
+          <td class="py-2.5 px-3 text-right">
+            ${device.isRevoked ? '<span class="text-slate-600 text-[11px]">Revoked</span>' : `<button onclick="revokeDevice('${device.id}')" class="px-2.5 py-1 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded text-[11px] border border-rose-500/30 transition">Revoke Key</button>`}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function revokeDevice(credentialId) {
+      if (!confirm('Are you sure you want to revoke this hardware passkey? The user will no longer be able to sign in with this device.')) return;
+      const res = await fetch('/api/admin/devices/revoke', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credentialId })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showStatus('Device revoked successfully.', 'success');
+        loadUserDevices();
+        fetchAuditLogs();
+      }
+    }
+
+    async function fetchAuditLogs() {
+      const res = await fetch('/api/admin/logs');
+      const data = await res.json();
+      const container = document.getElementById('audit-log-container');
+      container.innerHTML = '';
+
+      if (data.logs.length === 0) {
+        container.innerHTML = '<div class="text-xs text-slate-500 text-center py-4">No events logged yet.</div>';
+        return;
+      }
+
+      data.logs.forEach(log => {
+        let badgeColor = 'bg-slate-800 text-slate-300';
+        if (log.status === 'BLOCKED') badgeColor = 'bg-rose-500/20 text-rose-300 border border-rose-500/30';
+        else if (log.status === 'WARNING') badgeColor = 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
+        else if (log.status === 'SUCCESS') badgeColor = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+
+        const item = document.createElement('div');
+        item.className = 'p-3 bg-slate-950 rounded-xl border border-slate-800/80 flex items-center justify-between text-xs';
+        item.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${badgeColor}">${log.eventType}</span>
+            <span class="text-slate-300">${log.details}</span>
+          </div>
+          <span class="font-mono text-slate-500 text-[10px]">${log.timestamp}</span>
+        `;
+        container.appendChild(item);
+      });
+    }
   </script>
 </body>
 </html>
